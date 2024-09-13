@@ -2,6 +2,9 @@ import subprocess
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
+# Global variable to store the chat ID
+chat_id = None
+
 # Function to run the 'myria-node --status' command and return its output
 def get_myria_status():
     try:
@@ -21,9 +24,13 @@ def get_myria_status():
 
 # Function to handle '/status' command from Telegram
 async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    chat_id = update.message.chat_id
+    global chat_id
+    if chat_id is None:
+        await update.message.reply_text("Chat ID not set. Please restart the application and provide the chat ID.")
+        return
+
     status_output = get_myria_status()
-    
+
     try:
         await context.bot.send_message(chat_id=chat_id, text=status_output)
         print("Sent status to Telegram chat.")
@@ -32,6 +39,11 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 # Main function to set up the Telegram bot
 def main():
+    global chat_id
+
+    # Prompt for the chat ID
+    chat_id = input("Please enter your Telegram chat ID: ").strip()
+    
     # Initialize the Telegram bot
     application = Application.builder().token("6613010335:AAGDNIEHvnB1NEJYtCCWEbWU02xCFKIU6Zc").build()
 
