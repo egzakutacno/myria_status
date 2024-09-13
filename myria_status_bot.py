@@ -11,9 +11,18 @@ def run_myria_command():
     Path(output_folder).mkdir(parents=True, exist_ok=True)
     
     try:
+        print("Running 'myria-node --status' command...")
         result = subprocess.run(["myria-node", "--status"], capture_output=True, text=True)
-        with open(os.path.join(output_folder, "status.txt"), "w") as f:
-            f.write(result.stdout)
+
+        # Check if the command produced any output
+        if result.stdout:
+            print(f"Command output: {result.stdout}")
+            with open(os.path.join(output_folder, "status.txt"), "w") as f:
+                f.write(result.stdout)
+            print("Command output saved successfully in 'status.txt'.")
+        else:
+            print("No output from 'myria-node --status'. Command may have failed.")
+
     except Exception as e:
         print(f"Error running command: {e}")
 
@@ -21,11 +30,14 @@ def run_myria_command():
 async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = update.message.chat_id
     try:
+        print("Reading the 'status.txt' file...")
         with open("/root/Myria/status.txt", "r") as f:
             status_output = f.read()
         await context.bot.send_message(chat_id=chat_id, text=status_output)
+        print("Sent status to Telegram chat.")
     except Exception as e:
         await context.bot.send_message(chat_id=chat_id, text=f"Error reading status: {e}")
+        print(f"Error reading status file: {e}")
 
 # Function to request Telegram chat ID on first run
 def get_telegram_chat_id():
