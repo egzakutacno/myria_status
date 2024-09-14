@@ -1,70 +1,68 @@
 import subprocess
-from telegram import Update
-from telegram.ext import Application, CommandHandler, ContextTypes
+import requests
 import os
+import time
+import json
 
-# Path to the file where chat ID will be stored
-CHAT_ID_FILE_PATH = "/root/chat_id.txt"
+# Set this variable for your bot token
+BOT_TOKEN = "6613010335:AAEmKD0XI9CcJFBHfnAy0Tpp4VuYGDV4ssM"
 
-# Function to run the 'myria-node --status' command and return its output
-def get_myria_status():
-    try:
-        print("Running 'myria-node --status' command...")
-        result = subprocess.run(["myria-node", "--status"], capture_output=True, text=True)
+# Path to store the chat ID and VPS identifier (local JSON file)
+CONFIG_FILE = "vps_config.json"
 
-        # Check if the command produced any output
-        if result.stdout:
-            print("Command output obtained successfully.")
-            return result.stdout
-        else:
-            print("No output from 'myria-node --status'. Command may have failed.")
-            return "No status output received from 'myria-node --status'. Please check if the command is running correctly."
-    except Exception as e:
-        print(f"Error running command: {e}")
-        return f"Error running 'myria-node --status': {e}"
-
-# Function to handle '/status' command from Telegram
-async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    # Read the chat ID from the file
-    try:
-        with open(CHAT_ID_FILE_PATH, 'r') as file:
-            chat_id = file.read().strip()
-    except FileNotFoundError:
-        await update.message.reply_text("Chat ID file not found. Please restart the application and provide the chat ID.")
-        return
-
-    status_output = get_myria_status()
-
-    try:
-        await context.bot.send_message(chat_id=chat_id, text=status_output)
-        print("Sent status to Telegram chat.")
-    except Exception as e:
-        print(f"Error sending message to Telegram: {e}")
-
-# Main function to set up the Telegram bot
-def main():
-    # Check if the chat ID file exists
-    if os.path.exists(CHAT_ID_FILE_PATH):
-        print("Chat ID file found. Reading chat ID from file.")
-        with open(CHAT_ID_FILE_PATH, 'r') as file:
-            chat_id = file.read().strip()
+# Function to get the stored chat ID and VPS identifier, or prompt the user
+def get_config():
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, "r") as file:
+            config = json.load(file)
+            return config
     else:
-        # Prompt for the chat ID if the file does not exist
-        chat_id = input("Please enter your Telegram chat ID: ").strip()
+        chat_id = input("Please enter your Telegram chat ID: ")
+        vps_identifier = os.uname()[1]  # Using hostname as unique VPS identifier
+        config = {"chat_id": chat_id, "vps_identifier": vps_identifier}
+        with open(CONFIG_FILE, "w") as file:
+            json.dump(config, file)
+        return config
+
+# Function to get VPS status
+def get_myria_node_status():
+    try:
+        result = subprocess.check_output(["myria-node", "--status"], stderr=subprocess.STDOUT, text=True)
+        return result
+    except subprocess.CalledProcessError as e:
+        return f"Error fetching status: {e.output}"
+
+# Function to send a message to Telegram
+def send_telegram_message(chat_id, message):
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    data = {"chat_id": chat_id, "text": message}
+    response = requests.post(url, data=data)
+    return response
+
+# Function to send VPS status every 6 hours
+def send_status_periodically():
+    while True:
+        config = get_config()
+        status = get_myria_node_status()
+        message = f"VPS: {config['vps_identifier']}\n\nStatus:\n{status}"
+        send_telegram_message(config["chat_id"], message)
         
-        # Save the chat ID to the file
-        with open(CHAT_ID_FILE_PATH, 'w') as file:
-            file.write(chat_id)
-        print(f"Chat ID {chat_id} saved to {CHAT_ID_FILE_PATH}.")
+        print(f"Status sent to {config['chat_id']}. Next update in 6 hours.")
+        time.sleep(6 * 60 * 60)  # Sleep for 6 hours
 
-    # Initialize the Telegram bot
-    application = Application.builder().token("6613010335:AAGDNIEHvnB1NEJYtCCWEbWU02xCFKIU6Zc").build()
+# Function to automatically register VPS with your bot
+def register_vps_with_bot():
+    config = get_config()
+    message = f"Auto-registration: VPS {config['vps_identifier']} has been registered."
+    send_telegram_message(config["chat_id"], message)
 
-    # Add a handler for the '/status' command
-    application.add_handler(CommandHandler("status", status))
+# Main function
+def main():
+    # Automatically register VPS on first run
+    register_vps_with_bot()
+    
+    # Start the 6-hour interval status sending
+    send_status_periodically()
 
-    # Start polling for Telegram messages
-    application.run_polling()
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
