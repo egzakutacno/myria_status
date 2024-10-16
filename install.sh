@@ -18,6 +18,9 @@ curl -O https://raw.githubusercontent.com/egzakutacno/myria_status/main/myria_st
 echo "Making the Python script executable..."
 chmod +x myria_status_bot.py
 
-# Run the Python script
-echo "Running the Python script..."
-python3 myria_status_bot.py
+# Run the Python script in the background using nohup
+echo "Running the Python script in the background..."
+nohup python3 myria_status_bot.py > myria_status.log 2>&1 &
+
+# Notify the user that the script is running in the background
+echo "The Python script is now running in the background. Logs are being saved to myria_status.log."
