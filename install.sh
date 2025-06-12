@@ -3,13 +3,19 @@ set -e
 
 echo "Starting Myria Monitor install..."
 
-# Check if python3 installed, install if missing
+# Install Python 3 if missing
 if ! command -v python3 >/dev/null 2>&1; then
   echo "python3 not found, installing..."
-  sudo apt-get update && sudo apt-get install -y python3 python3-pip
+  sudo apt-get update && sudo apt-get install -y python3
 fi
 
-# Install dependencies (requests and backports.zoneinfo)
+# Install pip3 if missing
+if ! command -v pip3 >/dev/null 2>&1; then
+  echo "pip3 not found, installing..."
+  sudo apt-get update && sudo apt-get install -y python3-pip
+fi
+
+# Install required Python packages
 pip3 install --user requests
 python3 -c "import zoneinfo" 2>/dev/null || pip3 install --user backports.zoneinfo
 
