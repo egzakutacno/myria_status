@@ -31,6 +31,10 @@ read -p "Enter your Telegram Chat ID: " CHAT_ID
 CONFIG_FILE="$HOME/.myria_monitor_config.json"
 echo "{\"bot_token\":\"$BOT_TOKEN\", \"chat_id\":\"$CHAT_ID\"}" > "$CONFIG_FILE"
 
+# Run the monitoring script once immediately to verify
+echo "Running initial node status check..."
+python3 "$HOME/myria_monitor.py"
+
 # Setup systemd user service
 SERVICE_DIR="$HOME/.config/systemd/user"
 mkdir -p "$SERVICE_DIR"
