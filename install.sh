@@ -7,7 +7,7 @@ INSTALL_DIR="$HOME/myria_monitor"
 echo "Installing Myria Monitor..."
 
 if [ -d "$INSTALL_DIR" ]; then
-  echo "Existing installation found at $INSTALL_DIR, pulling latest changes..."
+  echo "Existing installation found, pulling latest changes..."
   cd "$INSTALL_DIR"
   git pull
 else
@@ -15,12 +15,19 @@ else
   cd "$INSTALL_DIR"
 fi
 
-# Optional: create and activate virtualenv if you want
-# python3 -m venv venv
-# source venv/bin/activate
-# pip install -r requirements.txt
-
 chmod +x myria_monitor.py
+
+echo -n "Enter your Telegram Bot Token: "
+read BOT_TOKEN
+echo -n "Enter your Telegram Chat ID: "
+read CHAT_ID
+
+cat > config.json <<EOF
+{
+  "bot_token": "$BOT_TOKEN",
+  "chat_id": "$CHAT_ID"
+}
+EOF
 
 echo "Starting myria_monitor.py in background..."
 nohup ./myria_monitor.py > myria_monitor.log 2>&1 &
