@@ -19,9 +19,10 @@ fi
 pip3 install --user requests
 python3 -c "import zoneinfo" 2>/dev/null || pip3 install --user backports.zoneinfo
 
-# Download the monitoring script
+# Download the monitoring scripts
 curl -fsSL https://github.com/egzakutacno/myria_status/raw/main/myria_monitor.py -o "$HOME/myria_monitor.py"
-chmod +x "$HOME/myria_monitor.py"
+curl -fsSL https://github.com/egzakutacno/myria_status/raw/main/myria_check_once.py -o "$HOME/myria_check_once.py"
+chmod +x "$HOME/myria_monitor.py" "$HOME/myria_check_once.py"
 
 # Ask user for Telegram credentials
 read -p "Enter your Telegram Bot Token: " BOT_TOKEN
@@ -31,9 +32,9 @@ read -p "Enter your Telegram Chat ID: " CHAT_ID
 CONFIG_FILE="$HOME/.myria_monitor_config.json"
 echo "{\"bot_token\":\"$BOT_TOKEN\", \"chat_id\":\"$CHAT_ID\"}" > "$CONFIG_FILE"
 
-# Run the monitoring script once immediately to verify
+# Run the one-time check to confirm installation works
 echo "Running initial node status check..."
-python3 "$HOME/myria_monitor.py"
+python3 "$HOME/myria_check_once.py"
 
 # Setup systemd user service
 SERVICE_DIR="$HOME/.config/systemd/user"
