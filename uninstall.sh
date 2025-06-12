@@ -1,34 +1,15 @@
 #!/bin/bash
-set -e
 
-echo "Stopping and disabling Myria Monitor service..."
+# Stop and disable the service
+sudo systemctl stop myria-monitor
+sudo systemctl disable myria-monitor
 
-systemctl --user stop myria-monitor.service || true
-systemctl --user disable myria-monitor.service || true
+# Remove files
+sudo rm /opt/myria_monitor.py
+sudo rm /etc/systemd/system/myria-monitor.service
+sudo rm /opt/config.json
 
-SERVICE_FILE="$HOME/.config/systemd/user/myria-monitor.service"
-if [ -f "$SERVICE_FILE" ]; then
-  rm "$SERVICE_FILE"
-  echo "Removed systemd service file."
-else
-  echo "Service file not found, skipping."
-fi
+# Reload systemd
+sudo systemctl daemon-reload
 
-systemctl --user daemon-reload
-
-if [ -f "$HOME/myria_monitor.py" ]; then
-  rm "$HOME/myria_monitor.py"
-  echo "Removed monitor script."
-else
-  echo "Monitor script not found, skipping."
-fi
-
-CONFIG_FILE="$HOME/.myria_monitor_config.json"
-if [ -f "$CONFIG_FILE" ]; then
-  rm "$CONFIG_FILE"
-  echo "Removed config file."
-else
-  echo "Config file not found, skipping."
-fi
-
-echo "Uninstallation complete."
+echo "✅ Myria Node Monitor has been uninstalled."
