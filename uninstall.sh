@@ -1,21 +1,22 @@
 #!/bin/bash
-set -e
 
-INSTALL_DIR="$HOME/myria_monitor"
+# Stop the systemd service
+sudo systemctl stop myria-monitor.service
 
-echo "Stopping Myria Monitor..."
+# Disable the service
+sudo systemctl disable myria-monitor.service
 
-pkill -f myria_monitor.py || true
+# Remove the service file
+sudo rm -f /etc/systemd/system/myria-monitor.service
 
-echo "Removing installation directory: $INSTALL_DIR"
+# Reload systemd to acknowledge the removal
+sudo systemctl daemon-reload
 
-rm -rf "$INSTALL_DIR"
+# Remove the application folder (adjust path if needed)
+rm -rf ~/myria_status
 
-if [ ! -d "$INSTALL_DIR" ]; then
-  echo "Installation directory removed successfully."
-else
-  echo "Failed to remove installation directory. Please check permissions or if files are locked."
-  exit 1
-fi
+# Optional: remove logs or temporary files if you created them elsewhere
+# Example:
+# rm -f /var/log/myria-monitor.log
 
-echo "Uninstallation complete."
+echo "✅ Myria Monitor uninstalled successfully."
