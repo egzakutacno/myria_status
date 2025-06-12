@@ -22,8 +22,8 @@ fi
 # Install required Python packages
 pip3 install requests schedule pytz
 
-# Download the monitor script
-wget -O /opt/myria_monitor.py https://github.com/egzakutacno/myria_status/blob/main/myria_monitor.py
+# Download the monitor script from RAW link
+wget -O /opt/myria_monitor.py https://raw.githubusercontent.com/egzakutacno/myria_status/main/myria_monitor.py
 chmod +x /opt/myria_monitor.py
 
 # Create systemd service
