@@ -1,43 +1,46 @@
 #!/bin/bash
+set -e
 
-# Simple installer for Myria Node Monitor
+echo "Starting Myria Monitor install..."
 
-echo "Installing Python and requests if not already installed..."
-sudo apt update
-sudo apt install -y python3 python3-pip
-pip3 install requests
+# Check if python3 is installed
+if ! command -v python3 &> /dev/null; then
+    echo "Python3 not found, installing..."
+    sudo apt-get update && sudo apt-get install -y python3 python3-pip
+fi
 
-echo "Please enter your Telegram bot token:"
-read BOT_TOKEN
-echo "Please enter your Telegram chat ID:"
-read CHAT_ID
+# Check if pip installed requests and backports.zoneinfo
+pip3 install --user requests
+python3 -c "import zoneinfo" 2>/dev/null || pip3 install --user backports.zoneinfo
 
-echo "Copying the monitoring script to /opt/myria-monitor..."
-sudo mkdir -p /opt/myria-monitor
-sudo cp myria_status_bot.py /opt/myria-monitor/
+# Download the script
+curl -fsSL https://github.com/yourusername/myria-monitor/raw/main/myria_monitor.py -o ~/myria_monitor.py
 
-echo "Saving configuration..."
-echo "{\"bot_token\": \"$BOT_TOKEN\", \"chat_id\": \"$CHAT_ID\"}" | sudo tee /opt/myria-monitor/config.json > /dev/null
+chmod +x ~/myria_monitor.py
 
-echo "Creating systemd service..."
-cat <<EOT | sudo tee /etc/systemd/system/myria-monitor.service
+# Create systemd service
+SERVICE_FILE="$HOME/.config/systemd/user/myria-monitor.service"
+mkdir -p "$(dirname "$SERVICE_FILE")"
+
+cat > "$SERVICE_FILE" <<EOF
 [Unit]
-Description=Myria Node Monitor
-After=network.target
+Description=Myria Node Monitor Service
 
 [Service]
-ExecStart=/usr/bin/python3 /opt/myria-monitor/myria_status_bot.py
+ExecStart=$(which python3) $HOME/myria_monitor.py
 Restart=always
-User=root
+RestartSec=10
 
 [Install]
-WantedBy=multi-user.target
-EOT
+WantedBy=default.target
+EOF
 
-echo "Reloading systemd..."
-sudo systemctl daemon-reload
-sudo systemctl enable myria-monitor.service
-sudo systemctl start myria-monitor.service
+# Enable and start user systemd service
+systemctl --user daemon-reload
+systemctl --user enable myria-monitor
+systemctl --user start myria-monitor
 
-echo "✅ Installation complete! The Myria Monitor is now running in the background."
-echo "You can check its status with: sudo systemctl status myria-monitor"
+echo "Myria Monitor installed and started as a user systemd service."
+echo "Run 'journalctl --user -u myria-monitor -f' to see logs."
+echo "On first run, you will be prompted for your Telegram Bot Token and Chat ID."
+
