@@ -1,8 +1,25 @@
 #!/bin/bash
 
-# Install dependencies
-sudo apt update
-sudo apt install -y python3 python3-pip
+# Check and install Python3
+if ! command -v python3 &> /dev/null
+then
+    echo "Python3 not found. Installing..."
+    sudo apt update
+    sudo apt install -y python3
+else
+    echo "Python3 is already installed."
+fi
+
+# Check and install pip3
+if ! command -v pip3 &> /dev/null
+then
+    echo "pip3 not found. Installing..."
+    sudo apt install -y python3-pip
+else
+    echo "pip3 is already installed."
+fi
+
+# Install required Python packages
 pip3 install requests schedule pytz
 
 # Download the monitor script
