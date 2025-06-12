@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-REPO_URL="https://github.com/egzakutacno/myria_status/blob/main/myria_monitor.py"
+REPO_URL="https://github.com/egzakutacno/myria_status.git"
 INSTALL_DIR="$HOME/myria_monitor"
 
 echo "Installing Myria Monitor..."
