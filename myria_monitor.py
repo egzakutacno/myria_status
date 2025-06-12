@@ -1,105 +1,65 @@
-#!/usr/bin/env python3
 import subprocess
 import requests
-import time
-from datetime import datetime, timedelta
 import json
 import os
-import sys
+import time
+import schedule
+from datetime import datetime
+from pytz import timezone
 
-try:
-    import zoneinfo  # Python 3.9+
-except ImportError:
-    from backports import zoneinfo  # For Python <3.9, install backports.zoneinfo
-
-CONFIG_PATH = os.path.expanduser("~/.myria_monitor_config.json")
-TELEGRAM_BOT_TOKEN = ""
-TELEGRAM_CHAT_ID = ""
+CONFIG_FILE = 'config.json'
 
 def load_config():
-    global TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
-    if os.path.exists(CONFIG_PATH):
-        try:
-            with open(CONFIG_PATH, "r") as f:
-                data = json.load(f)
-                TELEGRAM_BOT_TOKEN = data.get("bot_token", "")
-                TELEGRAM_CHAT_ID = data.get("chat_id", "")
-        except Exception as e:
-            print(f"Failed to read config file: {e}")
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, 'r') as f:
+            return json.load(f)
     else:
-        print("Config file not found! Exiting.")
-        sys.exit(1)
+        bot_token = input("Enter your Telegram Bot Token: ")
+        chat_id = input("Enter your Telegram Chat ID: ")
+        config = {'bot_token': bot_token, 'chat_id': chat_id}
+        with open(CONFIG_FILE, 'w') as f:
+            json.dump(config, f)
+        return config
 
-def send_telegram_message(message):
-    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
-        print("Telegram bot token or chat id not set.")
-        return False
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message}
+def send_telegram_message(token, chat_id, message):
+    url = f'https://api.telegram.org/bot{token}/sendMessage'
+    data = {'chat_id': chat_id, 'text': message}
     try:
-        resp = requests.post(url, data=payload, timeout=10)
-        if resp.ok:
-            print("Sent Telegram message.")
-        else:
-            print(f"Failed to send Telegram message: {resp.text}")
-        return resp.ok
+        requests.post(url, data=data)
     except Exception as e:
-        print(f"Exception sending Telegram message: {e}")
-        return False
+        print(f"Failed to send Telegram message: {e}")
 
-def check_node_status():
-    print(f"[{datetime.now().isoformat()}] Checking Myria Node status...")
+def check_node_status(config, alert_on_offline=True):
     try:
-        result = subprocess.run(
-            ["myria-node", "--status"],
-            capture_output=True,
-            text=True,
-            timeout=15,
-        )
-        output = result.stdout
-        print(f"Status output:\n{output}")
-
-        if "Current Cycle Status: running" in output and "Myria Node Service is running!" in output:
-            print("Node is healthy ✅")
-            return True
+        result = subprocess.check_output(['myria-node', '--status'], text=True)
+        if ('>>>[INFO] Current Cycle Status: running' in result and
+            '>>>[INFO] Myria Node Service is running!' in result):
+            print(f"[{datetime.now()}] Node is running.")
         else:
-            msg = "⚠️ Myria Node is NOT healthy on this VM.\nStatus output:\n" + output
-            print(msg)
-            send_telegram_message(msg)
-            return False
-    except subprocess.TimeoutExpired:
-        msg = "⏱️ Myria Node status check timed out on this VM."
-        print(msg)
-        send_telegram_message(msg)
-        return False
+            if alert_on_offline:
+                send_telegram_message(config['bot_token'], config['chat_id'], f"NODE IS OFFLINE\n\n{result}")
     except Exception as e:
-        msg = f"❌ Error checking Myria Node status on this VM:\n{e}"
-        print(msg)
-        send_telegram_message(msg)
-        return False
-
-def wait_until_next_check(target_hour, target_minute, tz):
-    now = datetime.now(tz)
-    target_time = now.replace(hour=target_hour, minute=target_minute, second=0, microsecond=0)
-    if target_time <= now:
-        target_time += timedelta(days=1)
-    wait_seconds = (target_time - now).total_seconds()
-    print(f"Waiting {int(wait_seconds)} seconds until next check at {target_hour:02d}:{target_minute:02d} HK time.")
-    time.sleep(wait_seconds)
+        send_telegram_message(config['bot_token'], config['chat_id'], f"NODE IS OFFLINE\n\nError: {e}")
 
 def main():
-    tz = zoneinfo.ZoneInfo("Asia/Hong_Kong")
-    load_config()
+    config = load_config()
+    
+    # Initial Check
+    check_node_status(config, alert_on_offline=False)
+    send_telegram_message(config['bot_token'], config['chat_id'], "Myria Monitor is now running.")
 
-    # Run one immediate check on start
-    check_node_status()
+    # Schedule fixed time checks (Hong Kong Time)
+    hk = timezone('Asia/Hong_Kong')
 
+    schedule.every().day.at("08:20").do(check_node_status, config)
+    schedule.every().day.at("15:20").do(check_node_status, config)
+
+    # Continuous monitoring every 1 minute
     while True:
-        wait_until_next_check(8, 20, tz)
-        check_node_status()
+        now = datetime.now(hk)
+        schedule.run_pending()
+        check_node_status(config)
+        time.sleep(60)
 
-        wait_until_next_check(15, 20, tz)
-        check_node_status()
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
