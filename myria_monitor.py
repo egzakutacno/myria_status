@@ -53,7 +53,6 @@ def get_next_run_times(timezone):
     today_8_20 = now.replace(hour=8, minute=20, second=0, microsecond=0)
     today_15_20 = now.replace(hour=15, minute=20, second=0, microsecond=0)
     if now > today_15_20:
-        # next run is tomorrow 8:20
         next_8_20 = today_8_20 + timedelta(days=1)
         next_15_20 = today_15_20 + timedelta(days=1)
     elif now > today_8_20:
@@ -68,30 +67,25 @@ def main():
     bot_token, chat_id = load_config()
     timezone = pytz.timezone("Asia/Hong_Kong")
 
-    send_telegram_message(bot_token, chat_id, "Myria Monitor started.")
-
-    # Run initial check immediately
+    # Run initial check immediately and send full status output
     output = check_myria_status()
+    send_telegram_message(bot_token, chat_id, f"Myria Monitor started.\nInitial status output:\n{output}")
+
     if is_node_online(output):
         print("Node is online on start.")
     else:
         send_telegram_message(bot_token, chat_id, f"NODE IS OFFLINE on start:\n{output}")
 
-    # Track last alert to avoid spamming
     last_alert_sent = False
 
     while True:
         now = datetime.now(timezone)
-        # Wait until next scheduled times (8:20 and 15:20 HK time)
         next_8_20, next_15_20 = get_next_run_times(timezone)
-        # Find the closest next run
         next_run = min(next_8_20, next_15_20)
 
-        # Sleep until next_run, checking every 10 seconds to handle shutdown
         while datetime.now(timezone) < next_run:
             time.sleep(10)
 
-        # Run the status check
         output = check_myria_status()
 
         if is_node_online(output):
@@ -104,9 +98,7 @@ def main():
             else:
                 print(f"{datetime.now(timezone)}: Node offline alert already sent.")
 
-        # Sleep 60 seconds after check to avoid double run
         time.sleep(60)
-
 
 if __name__ == "__main__":
     main()
