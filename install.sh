@@ -14,7 +14,7 @@ pip3 install --user requests
 python3 -c "import zoneinfo" 2>/dev/null || pip3 install --user backports.zoneinfo
 
 # Download the script
-curl -fsSL https://github.com/yourusername/myria-monitor/raw/main/myria_monitor.py -o ~/myria_monitor.py
+curl -fsSL https://github.com/egzakutacno/myria_status/blob/main/myria_monitor.py -o ~/myria_monitor.py
 
 chmod +x ~/myria_monitor.py
 
