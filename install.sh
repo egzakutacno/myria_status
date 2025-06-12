@@ -3,37 +3,39 @@ set -e
 
 echo "Starting Myria Monitor install..."
 
-# Check python3 and pip
-if ! command -v python3 &> /dev/null; then
-    echo "Installing python3..."
-    sudo apt-get update && sudo apt-get install -y python3 python3-pip
+# Check if python3 installed, install if missing
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "python3 not found, installing..."
+  sudo apt-get update && sudo apt-get install -y python3 python3-pip
 fi
 
+# Install dependencies (requests and backports.zoneinfo)
 pip3 install --user requests
 python3 -c "import zoneinfo" 2>/dev/null || pip3 install --user backports.zoneinfo
 
-# Download monitor script
-curl -fsSL https://github.com/egzakutacno/myria_status/raw/main/myria_monitor.py -o ~/myria_monitor.py
-chmod +x ~/myria_monitor.py
+# Download the monitoring script
+curl -fsSL https://github.com/egzakutacno/myria_status/raw/main/myria_monitor.py -o "$HOME/myria_monitor.py"
+chmod +x "$HOME/myria_monitor.py"
 
-# Ask user for Telegram credentials here (once)
+# Ask user for Telegram credentials
 read -p "Enter your Telegram Bot Token: " BOT_TOKEN
 read -p "Enter your Telegram Chat ID: " CHAT_ID
 
-# Save credentials to config file BEFORE starting service
+# Save config file
 CONFIG_FILE="$HOME/.myria_monitor_config.json"
 echo "{\"bot_token\":\"$BOT_TOKEN\", \"chat_id\":\"$CHAT_ID\"}" > "$CONFIG_FILE"
 
 # Setup systemd user service
-SERVICE_FILE="$HOME/.config/systemd/user/myria-monitor.service"
-mkdir -p "$(dirname "$SERVICE_FILE")"
+SERVICE_DIR="$HOME/.config/systemd/user"
+mkdir -p "$SERVICE_DIR"
+SERVICE_FILE="$SERVICE_DIR/myria-monitor.service"
 
 cat > "$SERVICE_FILE" <<EOF
 [Unit]
 Description=Myria Node Monitor Service
 
 [Service]
-ExecStart=$(which python3) $HOME/myria_monitor.py
+ExecStart=$(command -v python3) $HOME/myria_monitor.py
 Restart=always
 RestartSec=10
 
@@ -41,6 +43,7 @@ RestartSec=10
 WantedBy=default.target
 EOF
 
+# Reload systemd and enable/start service
 systemctl --user daemon-reload
 systemctl --user enable myria-monitor
 systemctl --user start myria-monitor
