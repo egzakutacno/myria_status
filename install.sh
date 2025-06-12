@@ -1,48 +1,29 @@
 #!/bin/bash
+set -e
 
-# Check and install Python3
-if ! command -v python3 &> /dev/null
-then
-    echo "Python3 not found. Installing..."
-    sudo apt update
-    sudo apt install -y python3
+REPO_URL="https://github.com/egzakutacno/myria_status/blob/main/myria_monitor.py"
+INSTALL_DIR="$HOME/myria_monitor"
+
+echo "Installing Myria Monitor..."
+
+if [ -d "$INSTALL_DIR" ]; then
+  echo "Existing installation found at $INSTALL_DIR, pulling latest changes..."
+  cd "$INSTALL_DIR"
+  git pull
 else
-    echo "Python3 is already installed."
+  git clone "$REPO_URL" "$INSTALL_DIR"
+  cd "$INSTALL_DIR"
 fi
 
-# Check and install pip3
-if ! command -v pip3 &> /dev/null
-then
-    echo "pip3 not found. Installing..."
-    sudo apt install -y python3-pip
-else
-    echo "pip3 is already installed."
-fi
+# Optional: create and activate virtualenv if you want
+# python3 -m venv venv
+# source venv/bin/activate
+# pip install -r requirements.txt
 
-# Install required Python packages
-pip3 install requests schedule pytz
+chmod +x myria_monitor.py
 
-# Download the monitor script from RAW link
-wget -O /opt/myria_monitor.py https://raw.githubusercontent.com/egzakutacno/myria_status/main/myria_monitor.py
-chmod +x /opt/myria_monitor.py
+echo "Starting myria_monitor.py in background..."
+nohup ./myria_monitor.py > myria_monitor.log 2>&1 &
 
-# Create systemd service
-cat <<EOF | sudo tee /etc/systemd/system/myria-monitor.service
-[Unit]
-Description=Myria Node Monitor
-After=network.target
-
-[Service]
-ExecStart=/usr/bin/python3 /opt/myria_monitor.py
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-# Enable and start the service
-sudo systemctl daemon-reload
-sudo systemctl enable myria-monitor
-sudo systemctl start myria-monitor
-
-echo "✅ Myria Node Monitor installed and running."
+echo "Installation complete. The monitor is running in background."
+echo "To check logs: tail -f $INSTALL_DIR/myria_monitor.log"
