@@ -7,9 +7,17 @@ sudo apt update
 sudo apt install -y python3 python3-pip
 pip3 install requests
 
+echo "Please enter your Telegram bot token:"
+read BOT_TOKEN
+echo "Please enter your Telegram chat ID:"
+read CHAT_ID
+
 echo "Copying the monitoring script to /opt/myria-monitor..."
 sudo mkdir -p /opt/myria-monitor
-sudo cp myria_monitor.py /opt/myria-monitor/
+sudo cp myria_status_bot.py /opt/myria-monitor/
+
+echo "Saving configuration..."
+echo "{\"bot_token\": \"$BOT_TOKEN\", \"chat_id\": \"$CHAT_ID\"}" | sudo tee /opt/myria-monitor/config.json > /dev/null
 
 echo "Creating systemd service..."
 cat <<EOT | sudo tee /etc/systemd/system/myria-monitor.service
@@ -18,7 +26,7 @@ Description=Myria Node Monitor
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/python3 /opt/myria-monitor/myria_monitor.py
+ExecStart=/usr/bin/python3 /opt/myria-monitor/myria_status_bot.py
 Restart=always
 User=root
 
